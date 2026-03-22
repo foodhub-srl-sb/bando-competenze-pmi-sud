@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 1.5. COUNTDOWN LOGIC ---
     const initCountdown = () => {
-        const targetDate = new Date('June 23, 2026 00:00:00').getTime();
+        const targetDate = new Date('April 21, 2026 09:00:00').getTime();
 
         const updateTimer = () => {
             const now = new Date().getTime();
@@ -52,17 +52,16 @@ document.addEventListener('DOMContentLoaded', () => {
         sliderDipendenti: document.getElementById('dipendenti'),
         sliderFatturato: document.getElementById('fatturato'),
         sliderPartecipanti: document.getElementById('partecipanti'),
-        sliderOre: document.getElementById('ore'),
+        sliderOrePerDipendente: document.getElementById('ore_per_dipendente'),
         inputCostoDipendente: document.getElementById('costo_dipendente'),
         selectRegione: document.getElementById('regione'),
-        courseCheckboxes: document.querySelectorAll('input[name="selected_courses"]'),
 
         // Display Labels
         display: {
             dipendenti: document.getElementById('display-dipendenti'),
             fatturato: document.getElementById('display-fatturato'),
             partecipanti: document.getElementById('display-partecipanti'),
-            ore: document.getElementById('display-ore'),
+            orePerDipendente: document.getElementById('display-ore-per-dipendente'),
             costoDipendente: document.getElementById('display-costo-dipendente'),
             percentage: document.getElementById('percentage-result'),
             grant: document.getElementById('grant-result'),
@@ -72,11 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
             netCost: document.getElementById('net-cost-summary')
         },
 
-        // Dropdown & Pills
-        dropdownBtn: document.getElementById('course-dropdown-btn'),
-        dropdownMenu: document.getElementById('course-menu'),
-        selectionText: document.getElementById('dropdown-selection-text'),
-        pillsContainer: document.getElementById('selected-courses-pills'),
+        // Removal of Dropdown & Pills references as requested
 
         // Warnings
         warnings: {
@@ -156,10 +151,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const { display, warnings } = ELEMENTS;
 
         // Labels
-        display.dipendenti.innerText = results.dipendenti;
-        display.fatturato.innerText = results.fatturato + " Mln €";
         display.partecipanti.innerText = results.partecipanti;
-        display.ore.innerText = results.oreCorsi + " h";
+        display.orePerDipendente.innerText = results.orePerDipendente + ' h';
         display.costoDipendente.innerText = formatCurrency(results.costoOrarioDipendente);
 
         // Summaries
@@ -251,7 +244,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const fatturato = parseFloat(ELEMENTS.sliderFatturato.value) || 0;
         let partecipanti = parseInt(ELEMENTS.sliderPartecipanti.value) || 0;
 
-        // Sync participants with total employees
         if (partecipanti > dipendenti) {
             partecipanti = dipendenti;
             ELEMENTS.sliderPartecipanti.value = partecipanti;
@@ -259,68 +251,52 @@ document.addEventListener('DOMContentLoaded', () => {
         ELEMENTS.sliderPartecipanti.max = dipendenti;
 
         const size = getSmeSize(dipendenti, fatturato);
-
-        // Auto-select size radio in UI
-        const sizeRadio = document.querySelector(`input[name="size"][value="${size}"]`);
-        if (sizeRadio) sizeRadio.checked = true;
-
         const projectType = document.querySelector('input[name="project_type"]:checked').value;
-        const region = ELEMENTS.selectRegione.value;
         const costoOrarioDipendente = parseFloat(ELEMENTS.inputCostoDipendente.value) || 0;
 
-        // Regional Mapping
-        const regionalRates = { 'calabria': 41.19, 'isole_sud': 49.33, 'default': 45.03 };
-        const mappingCostoRegionale = regionalRates[region] || regionalRates.default;
-
-        // Courses Calculation
-        let oreCorsi = 0;
-        let costoCorsiFoodHub = 0;
-        const fascePartecipanti = Math.ceil(partecipanti / 10) || 1;
-
-        ELEMENTS.courseCheckboxes.forEach(cb => {
-            if (cb.checked) {
-                oreCorsi += parseInt(cb.dataset.hours) || 0;
-                if (window.coursesData && window.coursesData[cb.value]) {
-                    costoCorsiFoodHub += (window.coursesData[cb.value].price * fascePartecipanti);
-                }
-            }
-        });
-
+        const orePerDipendente = parseInt(ELEMENTS.sliderOrePerDipendente.value) || 40;
+        
+        // Base Cost per Participant (Consulting + Training)
+        const costPerParticipant = 2100;
+        
         // Main Formulas
-        let percentage = 0.50;
-        if (projectType === 'integrated') {
-            percentage = (size === 'micro_small') ? 0.70 : 0.60;
+        let percentage = 0.70; 
+        if (projectType === 'integrated' && size === 'medium') {
+            percentage = 0.60;
         }
 
-        const rawProjectCost = oreCorsi * partecipanti * mappingCostoRegionale;
-        const costoAziendale = oreCorsi * partecipanti * costoOrarioDipendente;
-
-        let costoProgetto = rawProjectCost;
+        const totalHours = orePerDipendente * partecipanti;
+        const costoPersonale = totalHours * costoOrarioDipendente;
+        const costoServizi = costPerParticipant * partecipanti;
+        
+        let costoProgetto = costoPersonale + costoServizi;
         let isCapped = false;
         let isBelowMin = false;
 
         if (costoProgetto > 60000) {
             costoProgetto = 60000;
             isCapped = true;
-        } else if (costoProgetto < 10000 && costoProgetto > 0) {
-            costoProgetto = 10000;
+        } else if (costoProgetto < 5000 && costoProgetto > 0) {
+            costoProgetto = 5000;
             isBelowMin = true;
         }
 
-        const grant = costoProgetto * percentage;
-        const costoNetto = (costoAziendale + costoCorsiFoodHub) - grant;
+        let grant = costoProgetto * percentage;
+        if (grant > 42000) { grant = 42000; isCapped = true; }
 
-        // UI Sync
-        ELEMENTS.sliderOre.value = oreCorsi;
-        updatePills();
+        const costoNetto = (costoPersonale + costoServizi) - grant;
+
         updateUI({
-            dipendenti, fatturato, partecipanti, oreCorsi, costoOrarioDipendente,
-            percentage, grant, costoAziendale, costoCorsiFoodHub, costoProgetto, costoNetto,
+            dipendenti, fatturato, partecipanti, costoOrarioDipendente,
+            orePerDipendente,
+            percentage, grant: Math.round(grant), 
+            costoAziendale: costoPersonale, 
+            costoCorsiFoodHub: costoServizi, 
+            costoProgetto, costoNetto,
             isCapped, isBelowMin
         });
 
-        // Update Suitability
-        updateSuitabilityScore({ dipendenti, fatturato, oreCorsi });
+        updateSuitabilityScore({ dipendenti, fatturato, oreCorsi: orePerDipendente });
     };
 
     const scheduleCalculate = () => {
@@ -333,53 +309,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    function updatePills() {
-        if (!ELEMENTS.pillsContainer) return;
-
-        const fragment = document.createDocumentFragment();
-        let selectedCount = 0;
-
-        ELEMENTS.courseCheckboxes.forEach(cb => {
-            if (cb.checked) {
-                selectedCount++;
-                const pill = document.createElement('div');
-                pill.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20 text-accent text-[10px] font-bold animate-fade-in";
-                pill.innerHTML = `<span>${cb.dataset.name}</span> <i data-lucide="x" class="w-3 h-3 cursor-pointer hover:text-white" data-cb-value="${cb.value}"></i>`;
-                fragment.appendChild(pill);
-            }
-        });
-
-        ELEMENTS.pillsContainer.innerHTML = '';
-        ELEMENTS.pillsContainer.appendChild(fragment);
-
-        if (ELEMENTS.selectionText) {
-            ELEMENTS.selectionText.innerText = selectedCount > 0 ? `${selectedCount} Corsi Selezionati` : "Nessun corso selezionato";
-            ELEMENTS.selectionText.className = selectedCount > 0 ? 'text-white' : 'text-gray-400';
-        }
-
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-    }
+    // Selection pills logic removed as courses are no longer selectable
 
     // --- 4. EVENT LISTENERS ---
 
     // Configurator inputs
-    [ELEMENTS.sliderDipendenti, ELEMENTS.sliderFatturato, ELEMENTS.sliderPartecipanti, ELEMENTS.inputCostoDipendente].forEach(el => {
+    [ELEMENTS.sliderDipendenti, ELEMENTS.sliderFatturato, ELEMENTS.sliderPartecipanti, ELEMENTS.inputCostoDipendente, ELEMENTS.sliderOrePerDipendente].forEach(el => {
         el?.addEventListener('input', scheduleCalculate);
     });
     ELEMENTS.selectRegione?.addEventListener('change', scheduleCalculate);
 
     document.querySelectorAll('input[name="project_type"]').forEach(el => el.addEventListener('change', scheduleCalculate));
-    ELEMENTS.courseCheckboxes.forEach(el => el.addEventListener('change', scheduleCalculate));
-
-    // Pill delegation
-    ELEMENTS.pillsContainer?.addEventListener('click', (e) => {
-        const xIcon = e.target.closest('i[data-cb-value]');
-        if (xIcon) {
-            const val = xIcon.getAttribute('data-cb-value');
-            const cb = document.querySelector(`input[name="selected_courses"][value="${val}"]`);
-            if (cb) cb.click();
-        }
-    });
 
     // Roadmap interaction
     ELEMENTS.roadmapSteps.forEach(step => {
@@ -403,11 +343,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const stepData = {
             1: {
                 title: "Invio Domanda",
-                description: "Fase critica di caricamento. La domanda viene inviata tramite lo sportello telematico del MIMIT. Trattandosi di un bando a sportello, la tempestività è fondamentale per assicurarsi i fondi.",
-                timing: "21 Aprile - 23 Giugno",
-                priority: "Massima (Click Day)",
+                description: "Fase di caricamento su piattaforma MIMIT. Ci occupiamo noi della raccolta e validazione documentale per garantire la massima accuratezza.",
+                timing: "Dall'apertura del 21 Aprile",
+                priority: "Fase 1",
                 docs: ["Visura Camerale aggiornata", "DURC regolare", "Firma Digitale del legale rappresentante", "Copia documento d'identità"],
-                support: "Predisposizione della modulistica tecnica, validazione dei requisiti DNSH e gestione della coda di invio per garantire la priorità cronologica."
+                support: "Predisposizione della modulistica tecnica, validazione dei requisiti DNSH e gestione della pratica sul portale ufficiale."
             },
             2: {
                 title: "Istruttoria",
@@ -555,9 +495,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const buildWebhookPayload = (form) => {
         const inputs = form.querySelectorAll('input');
-        const corsiSelezionati = Array.from(ELEMENTS.courseCheckboxes)
-            .filter(cb => cb.checked)
-            .map(cb => ({ id: cb.value, titolo: (window.coursesData?.[cb.value]?.title) || cb.value, ore: cb.dataset.hours }));
 
         return {
             // Lead data
@@ -574,10 +511,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 dipendenti:        parseInt(ELEMENTS.sliderDipendenti?.value) || 0,
                 fatturato_mln:     parseFloat(ELEMENTS.sliderFatturato?.value) || 0,
                 partecipanti:      parseInt(ELEMENTS.sliderPartecipanti?.value) || 0,
+                ore_per_dipendente: parseInt(ELEMENTS.sliderOrePerDipendente?.value) || 0,
                 costo_orario_eur:  parseFloat(ELEMENTS.inputCostoDipendente?.value) || 0,
-                tipo_progetto:     document.querySelector('input[name="project_type"]:checked')?.value || 'standard',
-                corsi:             corsiSelezionati,
-                ore_totali:        parseInt(ELEMENTS.sliderOre?.value) || 0
+                tipo_progetto:     document.querySelector('input[name="project_type"]:checked')?.value || 'standard'
             },
             // Risultati calcolati (dal DOM display)
             risultati: {
@@ -701,71 +637,124 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    window.filterCourses = (category, btn) => {
-        const items = document.querySelectorAll('.course-card');
-        const buttons = document.querySelectorAll('.course-filter-btn');
+    // --- 10. COURSE SLIDER LOGIC ---
+    let currentCoursePage = 0;
 
-        // Update buttons state
-        buttons.forEach(b => {
-            b.classList.remove('bg-accent/20', 'border-accent/30', 'text-accent', 'shadow-[0_0_15px_rgba(92,180,123,0.1)]');
-            b.classList.add('bg-white/5', 'border-white/10', 'text-gray-400');
-        });
-
-        if (btn) {
-            btn.classList.add('bg-accent/20', 'border-accent/30', 'text-accent', 'shadow-[0_0_15px_rgba(92,180,123,0.1)]');
-            btn.classList.remove('bg-white/5', 'border-white/10', 'text-gray-400');
-        }
-
-        // Filter items with a small animation trigger
-        items.forEach(item => {
-            const categories = item.dataset.category || '';
-            const isMatch = category === 'all' || categories.split(' ').includes(category);
-
-            if (isMatch) {
-                item.style.display = 'flex';
-                setTimeout(() => item.style.opacity = '1', 10);
-            } else {
-                item.style.opacity = '0';
-                item.style.display = 'none';
-            }
-        });
+    const getEffectiveItemsPerPage = () => {
+        if (window.innerWidth < 768) return 1;
+        if (window.innerWidth < 1024) return 2;
+        return 3;
     };
 
-    window.scrollToFilter = (category) => {
-        const target = document.getElementById('catalogo-corsi');
-        if (target) {
-            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const initCourseSlider = () => {
+        const grid = document.getElementById('course-grid');
+        const prevBtn = document.getElementById('course-prev');
+        const nextBtn = document.getElementById('course-next');
+        const dotsContainer = document.getElementById('course-dots');
+        if (!grid || !prevBtn || !nextBtn || !dotsContainer) return;
 
-            // Trova il pulsante corrispondente nel filtro per attivarlo visivamente
-            const filterBtns = document.querySelectorAll('.course-filter-btn');
-            let targetBtn = null;
+        const updateSlider = () => {
+            const visibleCards = Array.from(grid.children).filter(card => card.style.display !== 'none');
+            const perPage = getEffectiveItemsPerPage();
+            const totalPages = Math.ceil(visibleCards.length / perPage);
+            
+            // Re-validate current page
+            if (currentCoursePage >= totalPages) currentCoursePage = Math.max(0, totalPages - 1);
+            if (currentCoursePage < 0) currentCoursePage = 0;
 
-            filterBtns.forEach(btn => {
-                if (btn.getAttribute('onclick').includes(`'${category}'`)) {
-                    targetBtn = btn;
-                }
+            // Calculate translation based on viewport width
+            const viewport = grid.parentElement;
+            const containerWidth = viewport.offsetWidth;
+            const gap = 24; // flex gap (gap-6)
+            
+            // To ensure 3 items are shown, we scroll by (containerWidth + gap)
+            const scrollAmount = currentCoursePage * (containerWidth + gap);
+            grid.style.transform = `translateX(-${scrollAmount}px)`;
+
+            // Visibility of controls: hide if only 1 page
+            const showControls = totalPages > 1;
+            [prevBtn, nextBtn, dotsContainer].forEach(el => {
+                el.style.display = showControls ? (el === dotsContainer ? 'flex' : 'flex') : 'none';
             });
 
-            setTimeout(() => {
-                window.filterCourses(category, targetBtn);
-            }, 400);
-        }
+            if (showControls) {
+                // Update buttons state
+                prevBtn.disabled = currentCoursePage === 0;
+                prevBtn.style.opacity = currentCoursePage === 0 ? '0.2' : '1';
+                prevBtn.style.cursor = currentCoursePage === 0 ? 'default' : 'pointer';
+
+                nextBtn.disabled = currentCoursePage >= totalPages - 1;
+                nextBtn.style.opacity = currentCoursePage >= totalPages - 1 ? '0.2' : '1';
+                nextBtn.style.cursor = currentCoursePage >= totalPages - 1 ? 'default' : 'pointer';
+
+                // Re-render dots
+                dotsContainer.innerHTML = '';
+                for (let i = 0; i < totalPages; i++) {
+                    const dot = document.createElement('button');
+                    dot.className = `w-2.5 h-2.5 rounded-full transition-all duration-300 ${i === currentCoursePage ? 'bg-accent w-6' : 'bg-white/20 hover:bg-white/40'}`;
+                    dot.onclick = () => {
+                        currentCoursePage = i;
+                        updateSlider();
+                    };
+                    dotsContainer.appendChild(dot);
+                }
+            }
+        };
+
+        prevBtn.onclick = () => {
+            if (currentCoursePage > 0) {
+                currentCoursePage--;
+                updateSlider();
+            }
+        };
+
+        nextBtn.onclick = () => {
+            const visibleCards = Array.from(grid.children).filter(card => card.style.display !== 'none');
+            const totalPages = Math.ceil(visibleCards.length / getEffectiveItemsPerPage());
+            if (currentCoursePage < totalPages - 1) {
+                currentCoursePage++;
+                updateSlider();
+            }
+        };
+
+        // Update on resize and expose globally
+        // Swipe support
+        let touchStartX = 0;
+        let touchEndX = 0;
+
+        viewport.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, { passive: true });
+
+        viewport.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            const diff = touchStartX - touchEndX;
+            if (Math.abs(diff) > 50) { // Threshold for swipe
+                if (diff > 0) { // Swipe left -> next
+                    if (currentCoursePage < Math.ceil(Array.from(grid.children).filter(c => c.style.display !== 'none').length / getEffectiveItemsPerPage()) - 1) {
+                        currentCoursePage++;
+                        updateSlider();
+                    }
+                } else { // Swipe right -> prev
+                    if (currentCoursePage > 0) {
+                        currentCoursePage--;
+                        updateSlider();
+                    }
+                }
+            }
+        }, { passive: true });
+
+        window.addEventListener('resize', updateSlider);
+        window.refreshCourseSlider = updateSlider;
+        updateSlider();
     };
+
+    window.refreshCourseSlider = null; // Defined in initCourseSlider
 
     // --- 6. INITIALIZATION ---
     calculate();
     updateRoadmap(1);
 
-    const revealObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('active');
-                revealObserver.unobserve(entry.target);
-            }
-        });
-    }, { threshold: 0.15, rootMargin: "0px 0px -50px 0px" });
-
-    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
 
     // --- 7. LIVE SOCIAL PROOF LOGIC ---
     const today = new Date();
@@ -833,8 +822,47 @@ document.addEventListener('DOMContentLoaded', () => {
         }, { passive: true });
     };
 
+    // --- 11. STICKY CTA VISIBILITY ---
+    const handleStickyCta = () => {
+        const cta = ELEMENTS.stickyCta;
+        const config = document.getElementById('configuratore');
+        if (!cta || !config) return;
+
+        window.addEventListener('scroll', () => {
+            const configRect = config.getBoundingClientRect();
+            // Show if scrolled down from hero (500px), hide if inside or near the configuratore
+            const scrolledDown = window.scrollY > 500;
+            // The button should hide when the top of configuratore enters the view
+            const isInsideConfig = configRect.top < (window.innerHeight - 80) && configRect.bottom > 80;
+
+            if (scrolledDown && !isInsideConfig) {
+                cta.classList.remove('opacity-0', 'translate-y-10', 'pointer-events-none');
+                cta.classList.add('opacity-100', 'translate-y-0', 'pointer-events-auto');
+            } else {
+                cta.classList.add('opacity-0', 'translate-y-10', 'pointer-events-none');
+                cta.classList.remove('opacity-100', 'translate-y-0', 'pointer-events-auto');
+            }
+        }, { passive: true });
+    };
+
+    // Initialize all modules
     initCasesSlider();
+    initCourseSlider();
+    handleStickyCta();
+
+    // Reveal Observer with better margins for visibility
+    const revealObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('active');
+                revealObserver.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.1, rootMargin: "0px 0px -20px 0px" });
+
+    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
 });
+
 
 // --- GLOBAL MODAL FUNCTIONS ---
 
@@ -916,13 +944,13 @@ window.closeCourseModal = () => {
 };
 
 window.coursesData = {
-    1: { price: 2400, title: "Agricoltura di Precisione", category: "Agrifood & Life Science", colorClass: "bg-accent", textColorClass: "text-accent", duration: "16 Ore", level: "S3 2.5", description: "Sviluppo dell'agricoltura di precisione e dell'agricoltura del futuro. Esplora droni, sensori e AI per l'Agritech.", target: "Agronomi, Manager dell'Innovazione", modules: ["Telerilevamento multispettrale", "Sistemi guida assistita (VRT)", "IoT per monitoraggio suolo", "Big Data Decision Support"] },
-    2: { price: 1800, title: "Packaging & Tracciabilità", category: "Agrifood & Life Science", colorClass: "bg-brand-green", textColorClass: "text-brand-green", duration: "12 Ore", level: "S3 2.6", description: "Tecnologie per il packaging sostenibile e tracciabilità blockchain.", target: "Responsabili Qualità, Logistics Manager", modules: ["Materiali ecosostenibili", "Blockchain per filiera", "Smart Packaging", "Sicurezza alimentare"] },
-    3: { price: 2400, title: "Nutraceutica & Alimenti", category: "Agrifood & Life Science", colorClass: "bg-brand-orange", textColorClass: "text-brand-orange", duration: "16 Ore", level: "S3 2.7", description: "Sviluppo di alimenti funzionali e nutrigenomica.", target: "Tecnologi Alimentari, Biologi", modules: ["Nutrigenomica", "Ingredienti funzionali", "Estrazione bioattiva", "Validazione claim"] },
-    4: { price: 2400, title: "Processi Alta Efficienza", category: "Industria Sostenibile", colorClass: "bg-brand-orange", textColorClass: "text-brand-orange", duration: "16 Ore", level: "S3 3.1", description: "Ottimizzazione energetica e riduzione scarti industriali.", target: "Plant Manager, Energy Manager", modules: ["Audit energetici", "Lean Green", "Monitoraggio real-time", "Integrazione rinnovabili"] },
-    5: { price: 2400, title: "Sistemi Evolutivi", category: "Industria Sostenibile", colorClass: "bg-accent", textColorClass: "text-accent", duration: "16 Ore", level: "S3 3.2", description: "Robotica collaborativa e Digital Twin per la produzione flessibile.", target: "Ingegneri di Processo, IT Manager", modules: ["Cobot", "Digital Twin", "Cyber-Physical Systems", "Produzione personalizzata"] },
-    6: { price: 1200, title: "Materiali Ecocompatibili", category: "Industria Sostenibile", colorClass: "bg-brand-green", textColorClass: "text-brand-green", duration: "8 Ore", level: "S3 3.3", description: "Studio di materiali bio-based e polimeri biodegradabili.", target: "Progettisti, Responsabili Materiali", modules: ["Bio-polimeri", "Nanotecnologie", "LCA dei materiali", "Riciclo avanzato"] },
-    7: { price: 2400, title: "Digitale Catene Valore", category: "Transizione Digitale", colorClass: "bg-brand-orange", textColorClass: "text-brand-orange", duration: "16 Ore", level: "S3 9.2", description: "Digitalizzazione filiere e integrazione ERP/MES.", target: "Supply Chain Manager, IT Director", modules: ["Piattaforme integrate", "Data sharing B2B", "E-commerce industriale", "Dashboarding KPI"] },
-    8: { price: 1800, title: "Logistica Intelligente", category: "Transizione Digitale", colorClass: "bg-brand-orange", textColorClass: "text-brand-orange", duration: "12 Ore", level: "S3 9.3", description: "Mobilità sostenibile e AI per la logistica.", target: "Fleet Manager, Logistic Manager", modules: ["Ottimizzazione percorsi AI", "IoT tracking", "Green Logistics", "Last-mile 4.0"] },
-    9: { price: 1800, title: "Economia Circolare & Dati", category: "Transizione Verde", colorClass: "bg-brand-green", textColorClass: "text-brand-green", duration: "12 Ore", level: "S3 9.4/9.5", description: "Modelli circolari PaaS e analisi dati per sostenibilità.", target: "Sustainability Officer, Data Scientist", modules: ["Modelli PaaS", "Data-driven sustainability", "Strategie circolari", "Reporting ESG"] }
+    1: { price: 2400, title: "Agricoltura di Precisione", category: "Agrifood & Life Science", colorClass: "bg-accent", textColorClass: "text-accent", duration: "16 Ore", level: "S3 2.5", description: "Sviluppo di tecnologie per l'agricoltura del futuro, uso di sensori e analisi dati per ottimizzare le rese.", target: "Agronomi, Manager dell'Innovazione", modules: ["Telerilevamento multispettrale", "Sistemi guida assistita (VRT)", "IoT per monitoraggio suolo", "Big Data Decision Support"] },
+    2: { price: 1800, title: "Sistemi di Packaging & Tracciabilità", category: "Agrifood & Life Science", colorClass: "bg-brand-green", textColorClass: "text-brand-green", duration: "12 Ore", level: "S3 2.6", description: "Tecnologie per il packaging, la conservazione e la sicurezza delle produzioni alimentari.", target: "Responsabili Qualità, Logistics Manager", modules: ["Materiali ecosostenibili", "Blockchain per filiera", "Smart Packaging", "Sicurezza alimentare"] },
+    3: { price: 2400, title: "Nutraceutica e Alimenti Funzionali", category: "Agrifood & Life Science", colorClass: "bg-brand-orange", textColorClass: "text-brand-orange", duration: "16 Ore", level: "S3 2.7", description: "Studio dei nutrienti ad effetto terapeutico e sviluppo di alimenti innovativi per la salute.", target: "Tecnologi Alimentari, Biologi", modules: ["Nutrigenomica", "Ingredienti funzionali", "Estrazione bioattiva", "Validazione claim"] },
+    4: { price: 2400, title: "Processi Produttivi Innovativi", category: "Industria Sostenibile", colorClass: "bg-brand-orange", textColorClass: "text-brand-orange", duration: "16 Ore", level: "S3 3.1", description: "Focus su alta efficienza energetica e sostenibilità industriale nei cicli di produzione.", target: "Plant Manager, Energy Manager", modules: ["Audit energetici", "Lean Green", "Monitoraggio real-time", "Integrazione rinnovabili"] },
+    5: { price: 2400, title: "Sistemi Produttivi Evolutivi", category: "Industria Sostenibile", colorClass: "bg-accent", textColorClass: "text-accent", duration: "16 Ore", level: "S3 3.2", description: "Sistemi adattativi per la produzione personalizzata e flessibile negli impianti industriali.", target: "Ingegneri di Processo, IT Manager", modules: ["Cobot", "Digital Twin", "Cyber-Physical Systems", "Produzione personalizzata"] },
+    6: { price: 1200, title: "Materiali Ecocompatibili", category: "Industria Sostenibile", colorClass: "bg-brand-green", textColorClass: "text-brand-green", duration: "8 Ore", level: "S3 3.3", description: "Studio e applicazione di materiali innovativi ed ecocompatibili per i processi industriali.", target: "Progettisti, Responsabili Materiali", modules: ["Bio-polimeri", "Nanotecnologie", "LCA dei materiali", "Riciclo avanzato"] },
+    7: { price: 2400, title: "Digitalizzazione Catene del Valore", category: "Transizione Digitale", colorClass: "bg-brand-orange", textColorClass: "text-brand-orange", duration: "16 Ore", level: "S3 9.2", description: "Modelli avanzati per la digitalizzazione dei processi produttivi e della supply chain.", target: "Supply Chain Manager, IT Director", modules: ["Piattaforme integrate", "Data sharing B2B", "E-commerce industriale", "Dashboarding KPI"] },
+    8: { price: 1800, title: "Logistica Intelligente 4.0", category: "Transizione Digitale", colorClass: "bg-brand-orange", textColorClass: "text-brand-orange", duration: "12 Ore", level: "S3 9.3", description: "Mobilità sostenibile e sistemi logistici avanzati per l'ottimizzazione dei flussi merci.", target: "Fleet Manager, Logistic Manager", modules: ["Ottimizzazione percorsi AI", "IoT tracking", "Green Logistics", "Last-mile 4.0"] },
+    9: { price: 1800, title: "Economia Circolare & Dati", category: "Transizione Verde", colorClass: "bg-brand-green", textColorClass: "text-brand-green", duration: "12 Ore", level: "S3 9.4", description: "Uso efficiente delle risorse e analisi dati per la transizione verso modelli circolari.", target: "Sustainability Officer, Data Scientist", modules: ["Modelli PaaS", "Data-driven sustainability", "Strategie circolari", "Reporting ESG"] }
 };

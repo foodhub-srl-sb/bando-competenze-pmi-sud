@@ -1,0 +1,33 @@
+============================================================
+ WP ROCKET — Esclusioni per Landing Bando Competenze SUD
+============================================================
+
+DOVE: WP Rocket → File Optimization → Delay JavaScript Execution
+SEZIONE: "Exclusions" (esclusioni da Delay JS)
+
+Incolla queste stringhe, una per riga:
+------------------------------------------------------------
+cdn.tailwindcss.com
+unpkg.com/lucide
+fonts.googleapis.com/css2?family=Outfit
+fonts.gstatic.com/s/outfit
+------------------------------------------------------------
+
+DOVE: WP Rocket → File Optimization → Combine CSS
+☑ DISABILITATO per questa pagina (usa Page Rules se disponibile)
+
+DOVE: WP Rocket → File Optimization → Minify CSS
+☑ Puoi lasciare abilitato — il CSS inline non viene toccato
+
+DOVE: WP Rocket → Advanced Rules → Never Cache URL(s)
+(non necessario — la pagina può essere in cache)
+
+DOVE: WP Rocket → Media → LazyLoad
+☑ Puoi lasciare abilitato per le immagini
+
+============================================================
+ WP ROCKET — Page Rule per la pagina del bando (opzionale)
+============================================================
+URL pattern: /bando-compentenze-sud/
+Delay JS: DISABILITATO per questa pagina (soluzione più sicura)
+------------------------------------------------------------

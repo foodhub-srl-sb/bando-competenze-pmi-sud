@@ -22,7 +22,6 @@ html {
 /* Performance: Content Visibility for long pages */
 #il-bando,
 #metodo,
-#catalogo-corsi,
 #configuratore,
 #faq,
 #contatti,
@@ -105,6 +104,12 @@ input[type=range]::-webkit-slider-thumb:hover {
   opacity: 1;
   transform: translateY(0);
 }
+
+.delay-100 { transition-delay: 100ms; }
+.delay-150 { transition-delay: 150ms; }
+.delay-200 { transition-delay: 200ms; }
+.delay-300 { transition-delay: 300ms; }
+.delay-500 { transition-delay: 500ms; }
 
 @keyframes fadeInUp {
   from {
@@ -207,3 +212,70 @@ input[type=range]::-webkit-slider-thumb:hover {
   background-clip: text;
   -webkit-text-fill-color: transparent;
 }
+
+/* --- MOBILE UX OPTIMIZATIONS --- */
+@media (max-width: 768px) {
+  /* Sticky CTA reduction to prevent blocking content */
+  #sticky-cta {
+    bottom: 1.25rem !important;
+    width: calc(100% - 2.5rem) !important;
+    max-width: 400px !important;
+  }
+  
+  #sticky-cta a {
+    padding-top: 0.85rem !important;
+    padding-bottom: 0.85rem !important;
+    font-size: 0.95rem !important;
+    border-radius: 1.25rem !important;
+  }
+
+  /* Chatbot repositioning to avoid overlap with sticky CTA */
+  #chatbot-widget {
+    bottom: 1.25rem !important;
+    left: 1.25rem !important;
+    right: auto !important;
+  }
+
+  #chatbot-widget a {
+    width: 3.5rem !important;
+    height: 3.5rem !important;
+  }
+}
+
+/* --- SLIDER UTILITIES --- */
+.snap-x {
+  scroll-snap-type: x mandatory;
+}
+
+.snap-center {
+  scroll-snap-align: center;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+#combo-grid .glass-card {
+  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+}
+
+#course-grid {
+  will-change: transform;
+}
+
+#course-grid div.course-card {
+  transition: opacity 0.4s ease, border-color 0.3s ease, transform 0.4s ease;
+}
+
+/* Custom Bezier for premium feel */
+.cubic-bezier\(0\.4\2c \ 0\2c \ 0\.2\2c \ 1\) {
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+

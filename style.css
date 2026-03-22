@@ -83,15 +83,15 @@ input[type=range]::-webkit-slider-thumb:hover {
 
 /* --- ANIMATIONS --- */
 
-/* Scroll Reveal - opacity:0 solo se JS è abilitato (.js-loaded sul body) */
-.js-loaded .reveal {
+/* Scroll Reveal — attivato solo da JS dopo setup completo */
+.reveal-ready .reveal {
   opacity: 0;
   transform: translateY(25px);
   transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
   will-change: transform, opacity;
 }
 
-.js-loaded .reveal.active {
+.reveal-ready .reveal.active {
   opacity: 1;
   transform: translateY(0);
 }

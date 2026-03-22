@@ -3,11 +3,7 @@
  * Optimized for performance and maintainability.
  */
 
-// Marca il body con js-loaded immediatamente: abilita le animazioni reveal
-// solo quando JavaScript è disponibile (evita sezioni vuote senza JS)
-document.documentElement.classList.add('js-loaded');
 document.addEventListener('DOMContentLoaded', () => {
-    document.body.classList.add('js-loaded');
     // --- 1. CONFIGURATION & STATE ---
     const STATE = {
         lastGrantValue: 22515,
@@ -854,17 +850,29 @@ document.addEventListener('DOMContentLoaded', () => {
     initCourseSlider();
     handleStickyCta();
 
-    // Reveal Observer with better margins for visibility
-    const revealObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('active');
-                revealObserver.unobserve(entry.target);
-            }
-        });
-    }, { threshold: 0.1, rootMargin: "0px 0px -20px 0px" });
+});
 
-    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+// Reveal Observer — listener SEPARATO dal resto dello script
+// Così anche se calculate() o initCourseSlider() crashano, le sezioni restano visibili
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        const revealObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                    revealObserver.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.1, rootMargin: "0px 0px -20px 0px" });
+
+        document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+        // Solo DOPO setup completo dell'observer, abilita le animazioni.
+        // Se questo punto non viene raggiunto, il contenuto resta visibile (no opacity:0)
+        document.documentElement.classList.add('reveal-ready');
+    } catch(e) {
+        console.warn('Reveal setup failed, content stays visible:', e);
+    }
 });
 
 

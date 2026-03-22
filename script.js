@@ -3,7 +3,11 @@
  * Optimized for performance and maintainability.
  */
 
+// Marca il body con js-loaded immediatamente: abilita le animazioni reveal
+// solo quando JavaScript è disponibile (evita sezioni vuote senza JS)
+document.documentElement.classList.add('js-loaded');
 document.addEventListener('DOMContentLoaded', () => {
+    document.body.classList.add('js-loaded');
     // --- 1. CONFIGURATION & STATE ---
     const STATE = {
         lastGrantValue: 22515,

@@ -255,7 +255,8 @@ document.addEventListener('DOMContentLoaded', () => {
         ELEMENTS.sliderPartecipanti.max = dipendenti;
 
         const size = getSmeSize(dipendenti, fatturato);
-        const projectType = document.querySelector('input[name="project_type"]:checked').value;
+        const projectTypeElement = document.querySelector('input[name="project_type"]:checked');
+        const projectType = projectTypeElement ? projectTypeElement.value : 'standard';
         const costoOrarioDipendente = parseFloat(ELEMENTS.inputCostoDipendente.value) || 0;
 
         const orePerDipendente = parseInt(ELEMENTS.sliderOrePerDipendente.value) || 40;
@@ -451,16 +452,18 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 300);
         }
     }
-    ELEMENTS.dropdownBtn?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        ELEMENTS.dropdownMenu.classList.toggle('hidden');
-    });
+    if (ELEMENTS.dropdownBtn && ELEMENTS.dropdownMenu) {
+        ELEMENTS.dropdownBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            ELEMENTS.dropdownMenu.classList.toggle('hidden');
+        });
 
-    document.addEventListener('click', (e) => {
-        if (ELEMENTS.dropdownMenu && !ELEMENTS.dropdownBtn.contains(e.target) && !ELEMENTS.dropdownMenu.contains(e.target)) {
-            ELEMENTS.dropdownMenu.classList.add('hidden');
-        }
-    });
+        document.addEventListener('click', (e) => {
+            if (!ELEMENTS.dropdownBtn.contains(e.target) && !ELEMENTS.dropdownMenu.contains(e.target)) {
+                ELEMENTS.dropdownMenu.classList.add('hidden');
+            }
+        });
+    }
 
     // Navbar & Sticky CTA Scroll (Throttled)
     let scrollTicking = false;
@@ -657,6 +660,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const dotsContainer = document.getElementById('course-dots');
         if (!grid || !prevBtn || !nextBtn || !dotsContainer) return;
 
+        const viewport = grid.parentElement;
+
         const updateSlider = () => {
             const visibleCards = Array.from(grid.children).filter(card => card.style.display !== 'none');
             const perPage = getEffectiveItemsPerPage();
@@ -667,7 +672,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (currentCoursePage < 0) currentCoursePage = 0;
 
             // Calculate translation based on viewport width
-            const viewport = grid.parentElement;
             const containerWidth = viewport.offsetWidth;
             const gap = 24; // flex gap (gap-6)
             

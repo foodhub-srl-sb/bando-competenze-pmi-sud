@@ -19,16 +19,7 @@ html {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Performance: Content Visibility for long pages */
-#il-bando,
-#metodo,
-#configuratore,
-#faq,
-#contatti,
-footer {
-  content-visibility: auto;
-  contain-intrinsic-size: 800px;
-}
+/* Removed content visibility rules to fix IntersectionObserver issues */
 
 /* Premium Scrollbar */
 ::-webkit-scrollbar {
